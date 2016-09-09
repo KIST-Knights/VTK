@@ -614,9 +614,19 @@ int vtkPolygon::ParameterizePolygon(double *p0, double *p10, double& l10,
 // Can also return -1 to indicate degenerate polygon. Note: a point in
 // bounding box check is NOT performed prior to in/out check. You may want
 // to do this to improve performance.
+
+double compLess(double a, double b)
+{
+	const double EPS = 1e-3;
+	if(a-b<-EPS || (a-b)/(a>0?a:-a) < -EPS) return true;
+	return false;
+}
+
 int vtkPolygon::PointInPolygon (double x[3], int numPts, double *pts,
                                 double bounds[6], double *n)
 {
+	const double EPS = 1e-3;
+
   double *x1, *x2, xray[3], u, v;
   double rayMag, mag=1, ray[3];
   int testResult, rayOK, status, numInts, i;
@@ -624,9 +634,9 @@ int vtkPolygon::PointInPolygon (double x[3], int numPts, double *pts,
   int maxComp, comps[2];
   int deltaVotes;
   // do a quick bounds check
-  if ( x[0] < bounds[0] || x[0] > bounds[1] ||
-       x[1] < bounds[2] || x[1] > bounds[3] ||
-       x[2] < bounds[4] || x[2] > bounds[5])
+  if ( compLess(x[0], bounds[0]) || compLess(bounds[1], x[0])||
+	  compLess(x[1], bounds[2]) || compLess(bounds[3], x[1]) ||
+	  compLess(x[2], bounds[4]) || compLess(bounds[5], x[2]))
     {
     return VTK_POLYGON_OUTSIDE;
     }
@@ -642,16 +652,16 @@ int vtkPolygon::PointInPolygon (double x[3], int numPts, double *pts,
       fabs((bounds[2*i+1] + bounds[2*i])/2.0 - x[i]);
     }
 
-  if ( (rayMag = vtkMath::Norm(ray)) == 0.0 )
+  if ( fabs((rayMag = vtkMath::Norm(ray))) < EPS )
     {
     return VTK_POLYGON_OUTSIDE;
     }
 
   //  Get the maximum component of the normal.
   //
-  if ( fabs(n[0]) > fabs(n[1]) )
+  if ( fabs(n[0]) + EPS > fabs(n[1]) )
     {
-    if ( fabs(n[0]) > fabs(n[2]) )
+    if ( fabs(n[0]) + EPS > fabs(n[2]) )
       {
       maxComp = 0;
       comps[0] = 1;
@@ -666,7 +676,7 @@ int vtkPolygon::PointInPolygon (double x[3], int numPts, double *pts,
     }
   else
     {
-    if ( fabs(n[1]) > fabs(n[2]) )
+    if ( fabs(n[1]) + EPS> fabs(n[2]) )
       {
       maxComp = 1;
       comps[0] = 0;
@@ -682,7 +692,7 @@ int vtkPolygon::PointInPolygon (double x[3], int numPts, double *pts,
 
   //  Check that max component is non-zero
   //
-  if ( n[maxComp] == 0.0 )
+  if ( fabs(n[maxComp]) < EPS )
     {
     return VTK_POLYGON_FAILURE;
     }
